@@ -1,0 +1,14 @@
+# Object Oriented paradigm builds upon procedural paradigm but biulds around data
+# Shift focus from process of computation to data on which computations use as input/output
+
+# Code should be structured such that all data related to the same OBJECT, and code used 
+# to represent the BEHAVIOUR of the object should be stored together.
+
+# A CLASS is a template describing structure of data and the code needed to represent 
+# the structure of the data.
+
+# Example
+# lists 
+# Lists are a class 
+# They contain data -- e,g. strings
+# They also contain functions that describe the behaviour of strings
