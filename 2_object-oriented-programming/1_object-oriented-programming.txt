@@ -12,3 +12,7 @@
 # Lists are a class 
 # They contain data -- e,g. strings
 # They also contain functions that describe the behaviour of strings
+
+# On my own words: 
+# A class is a template to define an object with a set of attributes and methods
+# that act on those attributes
