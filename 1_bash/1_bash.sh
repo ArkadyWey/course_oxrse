@@ -52,3 +52,12 @@ ls -F ./shell-novice/shell/test_directory
 # Shell scripts are programs written in bash 
 
 # $1 means the first argument after the script name will be parsed as an argument 
+
+
+# for loops 
+# variables are used to store info that we want to use later 
+# a variable is a container that we put something inside that we give a label
+# changing a variable's value is like changing what's inside the container
+# $ tells the command line to treat what comes after it as a variable
+# ${variable} -- note {} are used to clearly indicate what the variable name is
+# it is good practive to echo the commands inside a loop to check before running
