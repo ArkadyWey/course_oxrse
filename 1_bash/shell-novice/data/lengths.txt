@@ -1,0 +1,4 @@
+    1001 sc_climate_data_1000.csv
+      11 sc_climate_data_10.csv
+ 1048576 sc_climate_data.csv
+ 1049588 total
