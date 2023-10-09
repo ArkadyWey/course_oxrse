@@ -13,8 +13,13 @@ class Book:
             equal = False
         return equal
 
-class Library:
+    def __hash__(self):
+        print(hash(str(self)))
+        return hash(str(self))
+
+class Library(set):
     def __init__(self):
+        super().__init__()
         self.books = []
     
     def __len__(self):
@@ -60,20 +65,20 @@ class Library:
             authors.append(book.author)
         return authors
     
-    def union(self, library):
-        shared_books = []
-        for book in self.books:
-            for another_book in library.books:
-                if book.__eq__(book=another_book) == True:
-                    shared_books.append(book)
-                else: 
-                    pass
-        library_union = Library()
-        for book in shared_books:
-            name = book.name
-            author = book.author
-            library_union.add_book(name=name,author=author)
-        return library_union
+    #def union(self, library):
+    #    shared_books = []
+    #    for book in self.books:
+    #        for another_book in library.books:
+    #            if book.__eq__(book=another_book) == True:
+    #                shared_books.append(book)
+    #            else: 
+    #                pass
+    #    library_union = Library()
+    #    for book in shared_books:
+    #        name = book.name
+    #        author = book.author
+    #        library_union.add_book(name=name,author=author)
+    #    return library_union
 
 library = Library()
 
@@ -99,9 +104,18 @@ another_library = Library()
 another_library.add_book('My First Book', 'Alice')
 another_library.add_book('My Second Book', 'Alice')
 
-union_library = library.union(library=another_library)
-
-for book in union_library.books:
+book_set = set(another_library.books)
+print(book_set)
+union_library = library.union(book_set)
+for book in union_library:
     print(book.__str__())
+
+# OR
+#union_library = library.union(library=another_library)
+#for book in union_library.books:
+#    print(book.__str__())
+
+
+
 #books = library.by_author('Carol')
 #print(books)
