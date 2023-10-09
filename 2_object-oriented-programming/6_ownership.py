@@ -1,5 +1,5 @@
 # Composition is about OWNERSHIP
-# x has y
+# x HAS y
 # For example, we say Academics HAVE Papers 
 # So one class can own another class as an attribute 
 
