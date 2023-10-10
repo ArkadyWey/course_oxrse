@@ -1,5 +1,6 @@
 The functional programming paradigm 
 
+
 Idea 
 -------
 Always use PURE FUNCTIONS - functions that only use the input parameters
@@ -12,6 +13,7 @@ Functions that are not pure are said to have SIDE EFFECTS.
 Note that printing is counted as a side effect, even if 
 it is the main purpose of the pure function.
 
+
 Purity--Efficiency trade-off
 ----------
 Purity makes code less efficient: If a function is pure, then 
@@ -19,6 +21,7 @@ we need to define a return variable inside the function in order to
 return it - this costs more memory but is easier to test/track. 
 If a function is inpure, then we update the input variable - this costs less memory 
 but is harder to test/track.
+
 
 Benefits
 ----------
@@ -35,6 +38,7 @@ Therefore can paralellise its use safe in the knowledge
 that independent of where and when (i.e., the state of the environment)
 it runs.
 
+
 Functional programming in practice 
 ----------
 Programs are not usually purely functional. 
@@ -45,6 +49,7 @@ This is as opposed to methods that update the current data frame that
 they act on.
 Under the hood though, it is derived from numpy and uses o-o programming.
 
+
 Order of functions 
 -----------
 Functions are treated as FIRST CLASS/ORDER. 
@@ -52,3 +57,8 @@ They are used as variables that can be passed to other functions as parameters.
 One simple way is using lambda functions.
 We never name lambdas - if you need to, then why use one?
 SECOND CLASS/ORDER functions are those that take other functions as input.
+
+Built in higher order functions -- map, filter reduce 
+
+Map
+Takes a function and applies it to each element in an iterable.
