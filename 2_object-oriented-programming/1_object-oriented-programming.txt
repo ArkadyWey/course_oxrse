@@ -14,5 +14,15 @@
 # They also contain functions that describe the behaviour of strings
 
 # On my own words: 
-# A class is a template to define an object with a set of attributes, and methods and properties
-# that act on those attributes
+# A class is a template to define an object with a set of attributes, and methods and properties 
+# (functions that act like attributes) that act on those attributes
+
+Why is this useful?
+Since a class is a template, we know that all objects are are instances of 
+that class have the same structure.
+
+NB: 
+Default methods are called INSTANCE methods - modifies the object attributes
+There are also CLASS methods - modifies the class attributes
+and 
+STATIC methods - modifies attributes that are independent of the object or class
