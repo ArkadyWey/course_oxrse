@@ -58,7 +58,17 @@ One simple way is using lambda functions.
 We never name lambdas - if you need to, then why use one?
 SECOND CLASS/ORDER functions are those that take other functions as input.
 
-Built in higher order functions -- map, filter reduce 
+Built in higher order functions -- map, filter, reduce 
 
 Map
 Takes a function and applies it to each element in an iterable.
+
+Filter 
+Takes a function that returns a boolean and returns elements of an iterable where the boolean is true
+
+Reduce 
+Takes a two variable to one variable function and evaluates pairs of elements 
+of en iterable sequentially to return a single element
+
+
+# Recursion
