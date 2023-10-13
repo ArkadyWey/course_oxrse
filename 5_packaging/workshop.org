@@ -1,0 +1,1200 @@
+#+SEQ_TODO: TODO | DONE
+
+#+HUGO_BASE_DIR: ./site
+
+* Table of content
+  :PROPERTIES:
+  
+  :END:
+** Introduction
+   What we are concerned about today: the problem(s) we want to solve.
+   What we are going to do, the tools that we are going to use.
+   The example that we are going to consider.
+** Making a package
+  :PROPERTIES:
+  :EXPORT_CUSTOM_FRONT_MATTER: :chapter "true"
+  :EXPORT_FILE_NAME: _index
+  :EXPORT_HUGO_SECTION: part1_making_a_package
+  :EXPORT_HUGO_WEIGHT: auto
+  :END:
+
+** Reusing a package across analyses
+  :PROPERTIES:
+  :EXPORT_CUSTOM_FRONT_MATTER: :chapter "true"
+  :EXPORT_FILE_NAME: _index
+  :EXPORT_HUGO_SECTION: part2_reusing_a_package
+  :EXPORT_HUGO_WEIGHT: auto
+  :END:
+** Virtual environments
+  :PROPERTIES:
+  :EXPORT_CUSTOM_FRONT_MATTER: :chapter "true"
+  :EXPORT_FILE_NAME: _index
+  :EXPORT_HUGO_SECTION: intermezzo_virtual_environments
+  :EXPORT_HUGO_WEIGHT: auto
+  :END:
+** Sharing a package
+   :PROPERTIES:
+   :EXPORT_CUSTOM_FRONT_MATTER: :chapter "true"
+   :EXPORT_FILE_NAME: _index
+   :EXPORT_HUGO_SECTION: part3_sharing_a_package
+   :EXPORT_HUGO_WEIGHT: auto
+   :END:
+   You now have a python package that you can use independently in your analyses.
+   This package lives somehwere in your system (the ~tstools/~) directory and your can install
+   it in a project's virtualenv using setuptools (~pip install~).
+
+   We now look at ways your can /share/ your package with people interested in using your pkg.
+   This includes yourself.
+
+   Sharing means making it straightforward to both
+   - Obtain the source code
+   - Install and use the package
+
+   In practice this means that anyone will be able to "pip install" your package:
+
+   #+begin_src shell
+     pip install tstools
+   #+end_src   
+* glossary
+- package
+- project
+- analysis
+- virtual environement
+
+* Introduction
+  :PROPERTIES:
+  :EXPORT_FILE_NAME: _index
+  :EXPORT_HUGO_SECTION: introduction
+  :EXPORT_HUGO_WEIGHT: auto
+  :END:
+
+  In this workshop, you are going to learn how to organise your Python software into
+  /packages/. Doing so, you will be able to 
+  - Have your software clearly organised in a way that is standard among Python developpers, making
+    your software easier to understand, test and debug. 
+  - Reuse your code across your research projects and analyses. No more copying and pasting
+    blocks of code around: implement and test things once.
+  - Easily share your software, making everybody (including yourself) able to ~pip install~
+    your package!
+
+  The *plan* is the following: we are going to start from a couple of rather messy python scripts and gradually
+  transform them into a full-blown python package. At the end of this workshop, you'll know:
+  - What is a Python package and how to create one (and why!).
+  - How to share your packages across several of your projects.
+  - Maintain packages independantly from your research projects and analyses.
+  - What are virtual environments and how to use them to install different versions of a package
+    for different analyses.
+  - How to share your package on the [[https://pypi.org/][Python Package Index]] (PyPI), effectively making it straightforward
+    for anyone to install your package with the ~pip~ package manager (and much more!).
+  - Where to go next.
+
+  Sounds interesting? Good! Get a cup of your favorite beverage and let's get started.
+
+** Materials for this course
+
+   This course assumes that you have a local copy of the materials repository.
+   To make it, you can simply clone the repository using git:
+   #+begin_src shell
+   git clone https://github.com/OxfordRSE/python-packaging-course
+   #+end_src
+
+   For non-git users, you can visit https://github.com/OxfordRSE/python-packaging-course 
+   and download the materials as a ZIP archive ("code" green button on the top right corner).
+
+** Two scripts to analyse a timeseries
+   
+   Our starting point for this workshop is the scripts ~analysis.py~ and ~show_extremes.py~.
+   You'll find them in the ~scripts/~ directory at the root of the repository.
+
+   Both scripts perform operations on a /timeseries/, a sequence of numbers indexed by time.
+   This timeseries is located in ~analysis1/data/brownian.csv~ and describes the (simulated)
+   one-dimensional movement of a particle undergoing [[https://en.wikipedia.org/wiki/Brownian_motion][brownian motion]].
+#+begin_src
+0.0,-0.2709970143466439
+0.1,-0.5901672546059646
+0.2,-0.3330040851951451
+0.3,-0.6087488066987489
+0.4,-0.40381970872171624
+0.5,-1.0618436436553174
+...
+#+end_src
+   The first column contains the various times when the particle's position was recorded, and
+   the second column the corresponding position.
+
+   Let's have a quick overview of these scripts, but *don't try to understand the details*, it is irrelevant to the present workshop. 
+   Instead, let's briefly describe their structure.
+
+*** Overview of ~base.py~
+    
+    After reading the timeseries from the file ~brownian.csv~, this script ~base.py~ does 
+    three things:
+    - It computes the average value of the particle's position over time and the standard 
+      deviation, which gives a measure of the spread around the average value.
+    - It plots the particle's position as a function of time from the initial time until
+      50 time units.
+    - Lastly, it computes and plots the histogram of the particle's position over the entirety
+      of the timeseries. In addition, the theoritical histogram is computed and drawn as a
+      continuous line on top of the measured histogram. For this, a function ~get_theoritical_histogram~
+      is defined, resembling the ~numpy~ function ~histogram~.
+
+    You're probably familiar with this kind of script, in which several independant operations are performed
+    on a single dataset. 
+    It is the typical output of some "back of the enveloppe", exploratory work so common in research.
+    Taking a step back, these scripts are the reason why high-level languages like Python are so popular
+    among scientists and researchers: got some data and want to quickly get some insight into it? Let's 
+    just jot down a few lines of code and get some numbers, figures and... ideas!
+
+    Whilst great for short early research phases, this "back of the enveloppe scripting" way of working can quickly 
+    backfire if maintained over longer periods of time, perhaps even over your whole research project.
+    Going back to ~analysis.py~, consider the following questions:
+    - What would you do if you wanted to plot the timeseries over the last 50 time units instead of the first 50?
+    - What would you do if you wanted to visualise the /Probablity Density Function/ (PDF) instead of the histogram (effectively passing the optional argument ~density=true~
+      to ~numpy.histogram~).
+    - What would you do if you were given a similar dataset to ~brownian.csv~ and asked to compute the mean, compute the histogram along with other things not implemented in ~analysis.py~ ?
+    
+    In the interest of time, you are likely to end up modifying some specific lines (to compute the PDF instead of the histogram for example), or/and copy and paste of lot of code.
+    Whilst convenience on a short term basis, is it going to be increasingly difficult to understand your script, track its purpose, and test that its results are correct.
+    Three months later, facing a smilar dataset, would you not be tempted to rewrite things from scratch? It doesn't have to be this way! As you're going to learn in this ourse, 
+    organising your Python software into /packages/ alleviates most of these issues.
+    
+*** Overview of ~show_extremes.py~
+
+    Contrarily to ~base.py~, the script ~show_extreme.py~ has one purpose: to
+    produce a figure displaying the full timeseries (the particle's position as a function
+    of time from the initial recorded time to the final recorded time) and to hightlight
+    /extreme fluctuations/: the rare events when the particle's position is above a given 
+    value ~threshold~.
+
+    The script starts by reading the data and setting the value of the threshold:
+    #+begin_src python
+      timeseries = np.genfromtxt("./data/brownian.csv", delimiter=",")
+      threshold = 2.5
+    #+end_src
+
+    The rest of the script is rather complex and its discussion is irrelevant to this course.
+    Let's just stress that it exhibits the same pitfalls than ~analysis.py~.
+
+
+** Separating methods from parameters and data
+   :PROPERTIES:
+   :EXPORT_HUGO_SECTION: part1_making_a_package
+   :EXPORT_FILE_NAME: separating_methods_from_parameters_and_data
+   :EXPORT_HUGO_WEIGHT: auto
+   :END:
+
+Roughly speaking, a numerical experiment is made of three components:
+- The data (dataset, or parameters of simulation).
+- The operations performed on this data.
+- The output (numbers, plots).
+
+As we saw, scripts ~analysis.py~, and ~show_extremes.py~ mix the three above components into a single 
+~.py~ file, making the analysis difficult (sometimes even risky!) to modify and test. 
+Re-using part of the code means copying and pasting blocks of code out of their original context, which is
+a dangerous practice.
+
+In both scripts, the operations performed on the timeseries ~brownian.csv~ are independant from it, and could very well
+be applied to another timeseries. In this workshop, we're going to extract these operations (computing the mean, the histogram, visualising the extremes...),
+and formulate them as Python /functions/, grouped by theme inside /modules/, in a way that can be reused across similar analyses. We'll then bundle these modules into a Python
+/package/ that will make it straightfoward to share them across different analysis, but also with other people.
+
+
+A script using our package could look like this:
+#+begin_src python
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import my_pkg
+
+  timeseries = np.genfromtxt("./data/my_timeseries.csv", delimiter=",")
+
+  mean, var = my_pkg.get_mean_and_var(timeseries)
+
+  fig, ax = my_pkg.get_pdf(timeseries)
+
+  threshold = 3*np.sqrt(var)
+  fig, ax = my_pkg.show_extremes(timeseries, threshold)
+#+end_src
+
+Compare the above to ~analysis.py~: it is much shorter and easier to read.
+The actual implementation of the various operations (computing the mean and variance, computing the histogram...) is now
+/encapsulated/ inside the package ~my_pkg~. 
+All that remains are the actual steps of the analysis.
+
+If we were to make changes to the way some operations are implemented, we would simply make
+changes to the package, leaving the scripts unmodified. This reduces the risk of messing of introducing errors in your analysis, when all what you want to do is modyfying
+some opearation of data.
+The changes are then made available to all the programs that use the package: no more copying and pasting code around.
+
+Taking a step back, the idea of separating different components is pervasive in software developemt
+and software design. Different names depending on the field (encapsulation, separation of concerns,
+bounded contexts...).
+
+* Making a python package
+** From scripts to modules
+  :PROPERTIES:
+  :EXPORT_FILE_NAME: from_scripts_to_modules
+  :EXPORT_HUGO_SECTION: part1_making_a_package
+  :EXPORT_HUGO_WEIGHT: auto
+  :END:
+*** Functions, modules, packages
+- functions, classes
+#+begin_src python
+  # operations.py
+  def add(a,b):
+      return a+b
+#+end_src
+- modules
+  Collection of python objects (classes, functions, variables)
+#+begin_src python
+  from operations import add
+  # "From file (or module) operations.py import object add"
+
+  result = add(1,2)
+#+end_src
+- packages
+  Collection of modules (~.py~ files)
+#+begin_src python
+  from calculator.operations import add
+  from calculator.representations import hexa
+
+  a = hexa(1)
+  b = hexa(2)
+
+  result = add(a,b)
+#+end_src
+
+*** Activity 1 - Turning scripts into a collection of functions
+ Let's rewrite both scripts ~scripts/analysis.py~ and ~scripts/show_extremes.py~
+ as a collection of functions that can be reused in separate scripts.
+
+ The directory ~analysis1/tstools/~ contains 3 python modules that contain (incomplete) functions performing 
+ the same operations on data described in the original scripts ~analysis.py~ and ~show_extremes.py~:
+
+#+begin_example
+  python-packaging-workshop/
+	  scripts/
+	  analysis1/
+		  tstools/
+			  __init__.py
+			  moments.py
+			  vis.py
+			  extremes.py
+#+end_example
+
+1. Open ~moments.py~ and complete function ~get_mean_and_var~ (replace the
+   string ~"######"~).
+2. Open file ~vis.py~ and complete functions ~plot_trajectory_subset~ and
+   ~plot_histogram~ (replace the strings ~"######"~).
+*Hint*: Use ~scripts/analysis.py~ as a reference.
+
+The file ~tstools/extremes.py~ implements a function ~show_extremes~ corresponding to script ~show_extremes.py~.
+It is already complete.
+
+** The ~tstools~ package
+  :PROPERTIES:
+  :EXPORT_FILE_NAME: the_tstools_package
+  :EXPORT_HUGO_SECTION: part1_making_a_package
+  :EXPORT_HUGO_WEIGHT: auto
+  :END:
+We now have a ~tstools~ directory with 3 modules:
+#+begin_example
+  analysis1/
+	  tstools/
+		  __init__.py
+		  moments.py
+		  vis.py
+		  show_extremes.py
+	  data/
+#+end_example
+
+In a way, the directory ~tstools~ is already a package, in the sense that it is possible to import functions from the modules:
+#+begin_src python :exports code
+  import numpy as np
+
+  import tstools.moments
+  from tstools.vis import plot_histogram
+
+  timeseries = np.genfromtxt("./data/brownian.csv", delimiter=",")
+
+  mean, var = tstools.moments.get_mean_and_var(timeseries)
+  fig, ax = tstools.vis.plot_histogram(timeseries)
+#+end_src
+
+Let's try to import the package as a whole:
+#+begin_src python :dir ".infrastructure/tstools-no-init" :results output :exports code
+  # compute-mean.py
+  import numpy as np
+
+  import tstools
+
+  timeseries = np.genfromtxt("./data/brownian.csv", delimiter=",")
+
+  mean = tstools.moments.get_mean_and_var(timeseries)
+#+end_src
+
+#+begin_example
+$ python compute_mean.py
+Traceback (most recent call last):
+  File "<stdin>", line 4, in <module>
+AttributeError: module 'tstools' has no attribute 'moments'
+#+end_example
+
+What happened here? When importing the directory ~tstools~, the python interpreter
+looks for a file named ~__init__.py~ inside this directory and imports this python file.
+If this python file is empty, or simply doesnt exists... nothing is imported.
+
+In the following section we add some ~import~ statements into the ~__init__.py~ so that 
+all our functions (in the three modules) ar available under the single namespae ~tstools~.
+** init dot pie
+  :PROPERTIES:
+  :EXPORT_FILE_NAME: init_dot_pie
+  :EXPORT_HUGO_SECTION: part1_making_a_package
+  :EXPORT_HUGO_WEIGHT: auto
+  :END:
+
+Whenever you import a directory, Python will look for a file __init__.py at the root of this
+directory, and, if found, will import it.
+It is the presence of this initialization file that truly makes the ~tstools~ directory a Python
+package[fn:1].
+
+As a first example, let's add the following code to ~__init__.py~:
+#+begin_src python
+  # tstools/__init__.py
+  from os.path import basename
+  filename = basename(__file__)
+  print(f"Hello from {filename}")
+#+end_src
+
+If we now import the ~tstools~ package:
+#+begin_src python :dir ".infrastructure/simple_init_dot_pie" :results output :exports both
+  import tstools
+  print(tstools.filename)
+#+end_src
+
+#+RESULTS:
+: Hello from __init__.py
+: __init__.py
+
+The lesson here is that any object (variable, function, class) defined in the ~__init__.py~ file is available
+under the package's namespace.
+
+*** Activity 2 - Bringing all functions under a single namespace
+Our package isn't very big, and the internal strucure with 3 different modules isn't
+very relevant for a user.
+
+1. Write the ~__init__.py~ so that all functions defined in
+   modules ~tstools.py~ and ~show_extremes.py~ are accessible directly
+   at the top-lvel (under the ~tstools~ namespace), /i.e/
+   #+begin_src python
+    import tstools
+    mean, var = tstools.get_mean_and_var(timeseries) # instead of mean, var = tstools.moments.get_mean_and_var(...)
+    fig, ax = tstools.show_extremes(timeseries, 4*np.sqrt(var)) # instead of fig, ax = tstools.vis.show_extremes(...)
+   #+end_src
+
+   *Hint*: By default python looks for modules in the current directory
+   and some other locations (more about that later). When using ~import~,
+   you can refer to modules in the current package using the /dot notation/:
+   #+begin_src python
+    # import something from module that resides
+    # in the current package (next to the __init__.py)
+    from .module import something
+   #+end_src
+
+*** Using the package
+
+Our package is now ready to be used in our analysis, and an analysis scripts could look like this:
+
+#+begin_src python
+  # analysis1/analysis1.py
+  import numpy as np
+  import matplotlib.pyplot as plt
+  import tstools
+
+  timeseries = np.genfromtxt("./data/brownian.csv", delimiter=",")
+
+  mean, var = tstools.get_mean_and_var(timeseries)
+
+  fig, ax = tstools.plot_histogram(timeseries, nbins=100)
+
+  threshold = 3*np.sqrt(var)
+  fig, ax = tstools.show_extremes(timeseries, threshold)
+#+end_src
+
+Note that the above does the job for both scripts ~scripts/analysis.py~ and ~scripts/show_extremes.py~! Much better don't you think?
+*** TODO Whats the value of any empty ~__init__.py~ ?              :noexport:
+*** Note: objets defined in __init__.py are avaialbe when importing /the pacakge/ :noexport:
+#+begin_src python
+    # __init__.py
+    mysymbol = "something"
+    print(mysymbol)
+#+end_src
+
+#+begin_src python
+  from tstools.tstools import get_mean_and_var
+  # this prints "something" but mysymbol is not
+  # accessible from tstools' namespace
+#+end_src
+* Part 2 - using the package across analyses
+** Another analysis
+   :PROPERTIES:
+   :EXPORT_HUGO_WEIGHT: auto
+   :EXPORT_HUGO_SECTION: part2_reusing_a_package
+   :EXPORT_FILE_NAME: another-analysis
+   :END:
+Let's say that we have another directory ~analysis2~, that contains another
+but similar dataset to ~analysis1/data/brownian.csv~.
+Now that we've structured our software into a python package, we would like
+to reuse that package for our second analysis.
+
+In the directory ~analysis2/~, let's simply write a script ~analysis2.py~, that imports the ~tstools~ package
+created in the previous section.
+#+begin_example
+  analysis2/
+	  analysis2.py
+	  data/
+		  data_analysis2.csv
+#+end_example
+
+#+begin_src python :dir "analysis2" :exports code
+  # analysis2/analysis2.py
+  import numpy as np
+
+  import tstools
+
+  timeseries = np.genfromtxt("./data/data_analysis2.csv", delimiter=",")
+  fig, ax = tstools.plot_trajectory_subset(timeseries, 0, 50)
+#+end_src
+
+#+begin_example
+$ python analysis2.py
+Traceback (most recent call last):
+  File "<stdin>", line 10, in <module>
+  File "<stdin>", line 5, in main
+ModuleNotFoundError: No module named 'tstools'
+#+end_example
+
+At the moment lives in the directory ~analysis1/~, and, unfortunately, Python cannot find it!
+How can we tell Python where our package is?
+
+** Where does python look for packages?
+   :PROPERTIES:
+   :EXPORT_HUGO_WEIGHT: auto
+   :EXPORT_HUGO_SECTION: part2_reusing_a_package
+   :EXPORT_FILE_NAME: where-does-python-look-for-packages
+   :END:
+When using the ~import~ statement, the python interpreter looks for the package (or module) in a list of directories
+known as the /python path/.
+
+Let's find out about what directories constitute the python path:
+
+#+begin_example
+$ python
+>>> import sys
+>>> sys.path
+['', '/usr/lib/python38.zip', '/usr/lib/python3.8', '/usr/lib/python3.8/lin-dynload', '/home/thibault/python-workshop-venv/lib/python3.8/site-packages/']
+#+end_example
+
+The order of this list matters: it is the order in which python looks into the directories
+that constitute the python path.
+To begin with, Python first looks in the current directory.
+If the package/module isn't found there, the python intepreter looks in the following directories
+(in this order):
+- ~/usr/lib/python38.zip~
+- ~/usr/lib/python3.8~
+- ~/usr/lib/python3.8/lib-dynload~
+The above contain the modules and packages in the /standard library/, /i.e/ the packages and modules that
+come "pre-installed" with Python.
+Finally, the python interpreter looks inside the directory ~/home/thibault/python-workshop-venv/lib/python3.8/site-packages/~.
+
+#+begin_quote
+The output of ~sys.path~ is probaby different on your machine. It depends on many factors,
+like your operating system, your version of Python, the location of your current active Python
+environment.
+#+end_quote
+
+For Python to find out package ~tstools~ it must be located in one of the directories listed in
+the ~sys.path~ list. If it is the case, the package is said to be /installed/.
+
+Looking back at the example in the [[* Another analysis][previous section]], let's list some potential workarounds
+for the ~tstools~ package to be importable in ~analysis2/~.:
+
+1. *Copy (~analysis1/tstools/~) in ~analysis2/~*.
+  You end up with two independant packages. If you make changes to one, you have to remember to make the same
+  changes to the other. It's the usual copy and paste problems: inefficient and error-prone.
+2. *Add ~analysis1/~ to ~sys.path~*.
+  At the beginning of ~analysis2.py~, you could just add
+  #+begin_src python
+    import sys
+    sys.path.append("../analysis1/")
+  #+end_src
+  This approach can be sufficient in some situations, but generally not recommended. What if the package directory is relocated?
+3. *Copy ~analysis1/tstools~ directory to the ~site-packages/~ directory.*
+  You have to know where the ~site-packages~ is. This depends on your current system and python environment (see below).
+  The location on your macine may very well be differnt from the location on your colleague's machine.
+
+More generally, the three above approaches overlook a very important point: *dependencies*.
+Our package has two: numpy and matplotlib.
+If you were to give your package to a colleague, nothing guarantees that they have both packages installed.
+This is a pedagogical example, as it is likely that they would have both installed, given the popularity of these packages.
+However, if your package relies on less widespread packages, specific versions of them or maybe a long list of packages,
+it is important to make sure that they are available.
+
+Note that all three above approaches work. 
+However, unless you have a good reason to use one of them, they are not recommended for the
+reasons above. In the next section, we look at the recommended way to install a package, using
+~setuptools~ and ~pip~.
+
+** pip and setuptools
+   :PROPERTIES:
+   :EXPORT_HUGO_WEIGHT: auto
+   :EXPORT_HUGO_SECTION: part2_reusing_a_package
+   :EXPORT_FILE_NAME: setuptools-and-setup-do-_pie
+   :END:
+The recommended way to install a package is to use the ~setuptools~ library in conjunction with
+~pip~, the official python /package manager/.
+Effectively, this approach is roughly equivalent to copying the package to the ~site-packages~ directory,
+expect that the process in *automated*.
+
+*** pip
+Pip is the de facto package manager for Python packages. 
+It's main job is to install, remove, upgrade, configure and manage Python packages, both available
+locally on your machine but also hosted on on the [[https://pypi.org/][Python Package Index (PyPI)]].
+Pip is maintained by the [[https://www.pypa.io/en/latest/][Python Packaging Authority]].
+
+Installing a package with ~pip~ looks like this
+#+begin_src shell
+pip install <package directory>
+#+end_src
+
+let's give it a try
+#+header: :prologue "exec 2>&1" :epilogue "true"
+#+header: :results output :exports both
+#+begin_src shell :dir  ".infrastructure/pip_example_no_setup" 
+# In directory analysis1/
+pip install ./tstools
+#+end_src
+
+#+RESULTS:
+: ERROR: Directory './tstools' is not installable. Neither 'setup.py' nor 'pyproject.toml' found.
+
+The above doesn't really look like our package got installed properly.
+For ~pip~ to be able to install our package, we must first give it some information about it.
+In fact, ~pip~ expects to find a python file named ~setup.py~ in the directory that it is
+given as an argument. This file will contain some metadata about the package and tell ~pip~
+the location of the actual source of the package.
+
+*** ~setup.py~ (setup dot pie) and distribution packages
+
+The ~setup.py~ file is a regular Python file that makes a call to the ~setup~ function
+available in the ~setuptools~ package.
+
+Let's have a look at a minimal ~setup.py~ file for our ~tstools~ package:
+#+begin_src python
+  from setuptools import setup
+
+  setup(name='tstools',
+	version='0.1',
+	description='A package to analyse timeseries',
+	url='myfancywebsite.com',
+	author='Spam Eggs',
+	packages=['tstools'],
+	install_requires = ["numpy, matplotlib, scipy"],
+	license='GPLv3')
+#+end_src
+
+The above gives ~pip~ some metadata about our package: its version, a short description,
+its authors, ad its license. It also provides information regarding the dependencies of 
+our package, /i.e/ ~numpy~ and ~matplotlib~.
+In addition, it gives ~setup~ the location of the package to be installed, in this case
+the directory ~tstools~.
+
+*IMPORTANT*: The above ~setup.py~ states ~(...,package=["tstools"],...)~.
+In English, this means "setuptools, please install the package ~tstools/~ located in the same directory as the file ~setup.py~".
+This therefore assumes that the file ~setup.py~ resides in the directory that /contains/ the package, in this case ~analysis1/~.
+#+begin_example
+  python-workshop/
+	  analysis1/
+		  data/
+		  analysis1.py
+		  setup.py
+		  tstools/
+#+end_example
+
+Actually, there are no reasons for our ~tstools~ package to be located in the ~analysis1/~ directory.
+Indeed, the package is independant from this specific analysis, and we want to share it among multiple analyses.
+
+To reflect this, let's move the ~tstools~ package into a new directory ~tstools-dist~ located next to the ~anaylis1~ and
+~analysis2~ directories:
+
+#+begin_example
+  python-workshop/
+	  analysis1/
+		  data/
+		  analysis1.py
+	  analysis2/
+		  data/
+		  analysis2.py
+	  tsools-dist/
+		  setup.py
+		  tstools/
+#+end_example
+
+The directory ~tstools-dist~ is a /distribution package/, containing the ~setup.py~ file and the package itself - the ~tstools~ directory.
+These are the two minimal ingredients required to /distribute/ a package, see section [[* Building python distributions]].
+
+*** Activity 3 -  Installing ~tsools~ with pip
+1. Write a new ~setup.py~ file in directory ~tstools-dist~ including the following metadata:
+  + The name of the package (could be ~tstools~ but also could be anything else)
+  + The version of the package (for example 0.1)
+  + A one-line description
+  + Your name as the author
+  + Your email
+  + The GPLv3 license
+  Hint: A list of optional keywords for ~setuptools.setup~ can be found [[https://setuptools.readthedocs.io/en/latest/setuptools.html#new-and-changed-setup-keywords][here]].
+2. *Un*install numpy and matplotlib
+   #+begin_src shell
+     pip uninstall numpy matplotlib
+   #+end_src
+   Make sure ~pip~ points to your current virtual environment (you can check this by typing ~pip --version~. Particularly, if admin rights are necessary to uninstall and install packages, you're probably using ~pip~ in your global Python environment. To make sure that you run the correct ~pip~ for your correct Python environment, run ~python -m pip <pip command>~ instead of ~pip <pip command>~
+3. Install the ~tstools~ package with ~pip~.
+   Remember: ~pip install <location of setup file>~
+   Notice how ~numpy~ and ~matplotlib~ are automatically downloaded (can you find from where?)
+   and installed.
+4. Move to the directory ~analysis2/~ and check that you can import your package from there.
+   Where is this package located?
+   Hint: You can check the location a package using the ~__file__~ attribute.
+5. The directory ~analysis2~ contains a timeseries under ~data/~. What is the average value
+   of the timeseries?
+
+Congratulations! Your ~tstools~ package is now installed can be reused across your analyses...
+no more dangerous copying and pasting!
+
+** Maintaining your package
+   :PROPERTIES:
+   :EXPORT_HUGO_WEIGHT: auto
+   :EXPORT_HUGO_SECTION: part2_reusing_a_package
+   :EXPORT_FILE_NAME: maintaining-your-pkg-independantly-from-your-analysis
+   :END:
+In the previous section you made your package "pip installable" by creating a ~setup.py~ file.
+You then installed the package, effectively making accessible between different analysis directories.
+
+However, a package is never set in stone: as you work on your analyses, you will almost certainly likely make changes to it,
+for instance to add functionalities or to fix bugs.
+
+You could just reinstall the package each time you make a modification to it, but this
+obviously becomes tedious if you are constantly making changes (maybe to hunt down a bug) and/or testing your package.
+In addition, you may simply forget to reinstall your package, leading to potentially very frustrating and time-consuming errors.
+
+*** Editable installs
+~pip~ has the ability to install the package in a so-called "editable" mode.
+Instead of copying your package to the package installation location, pip will just
+write a link to your package directory.
+In this way, when importing your package, the python interpreter is redirected to
+your package project directory.
+
+To install your package in editable mode, use the ~-e~ option for the ~install~ command:
+#+begin_src shell
+# In directory tstools-dist/
+pip install -e .
+#+end_src
+
+*** Actvity 4 - Editable install
+1. Uninstall the package with ~pip uninstall tstools~
+2. List all the installed packages and check that ~tstools~ is not among them
+   Hint: Use ~pip --help~ to get alist of available ~pip~ commands.
+3. re-install ~tstools~ in editable mode.
+4. Modify the ~tstools.vis.plot_trajectory_subset~ so that it returns the maximum value
+   over the trajectory subset, in addition to the ~figure~ and ~axis~.
+   Hint: You can use the numpy function ~amax~ to find the maximum of an array.
+5. What is the maximum value of the timeseries in ~analysis1/data/timeseries1.csv~ between
+   t=0 and t = 4 ?
+
+In editable mode, ~pip install~ just write a file ~<package-name>.egg-link~ at the package
+installation location in place of the actual package. This file contains the location of the
+package in your package project directory:
+
+#+begin_src shell
+cat ~/python-workshop-venv/lib/python3.8/site-packages/tstools.egg-link
+/home/thibault/python-packaging-workshop/tstools
+#+end_src
+
+** Summary and break
+   :PROPERTIES:
+   :EXPORT_HUGO_WEIGHT: auto
+   :EXPORT_HUGO_SECTION: part2_reusing_a_package
+   :EXPORT_FILE_NAME: summary_and_break
+   :END:
+   - In order to reuse our package across different analyses, we must /install/ it.
+     In effect, this means copying the package into a directory that is in the python path.
+     This shouldn't be done manually, but instead using the ~setuptools~ package to write a
+     ~setup.py~ file that is then processed by the ~pip install~ command.
+   - It would be both cumbersome and error-prone to have to reinstall the package each time
+     we make a change to it (to fix a bug for instance). Instead, the package can be installed
+     in "editable" mode using the ~pip install -e~ command. This just redirects the python
+     interpreter to your project directory.
+   - The main value of packaging software is to facilitate its reuse across different projects.
+     One you have extracted the right operations into a package that is independent of your
+     analysis, you can easily "share" it between projects. In this way you avoid inefficient
+     and dangerous duplication of code.
+
+Beyond greatly facilitating code reuse, writing a python package (as opposed to a loosely
+organised collection of modules) enables a clear organisation of your software into modules
+and possibly sub-packages. It makes it much easier for others, as well as yourself, to
+understand the structure of your software, /i.e/ what-does-what.
+
+Moreover, organising your python software into a package gives you access to a myriad
+of fantastic tools used by thousands of python developers everyday. Examples include
+pytest for automated testing, sphinx for building you documentation, tox for automation
+of project-level tasks.
+
+Next, we'll talk about python virtual environments. But before, fancy a little break?
+
+[[/python-packaging-course/kisspng-cafe-coffee-cup-tea-cafe-graphic-5ac8dcf5aa0815.5906502615231132056965.png]]
+* Intermezzo: Python virtual environments
+** Installing different versions of a package
+   :PROPERTIES:
+   :EXPORT_HUGO_WEIGHT: auto
+   :EXPORT_HUGO_SECTION: intermezzo_virtual_environments
+   :EXPORT_FILE_NAME: installing_different_versions_of_a_package
+   :END:
+In the previous section you learned how to share a package across several projects, or analyses.
+However, as your package and analyses evolve asynchronously, it is likely that you will reach a point when
+you'd like different analyses to use different versions of your package, or different versions of third-party
+packages that your analysis rely on.
+
+The question is then: /how to install two different versions of a same package?/
+And the (short) answer is: *you cannot*.
+
+If you type ~pip install numpy==1.18~, ~pip~ first looks for a version
+of ~numpy~ already installed (in the ~site-packages/~ directory).
+If it finds a different version, say 1.19, ~pip~ will uninstall it and
+install numpy 1.18 instead.
+
+This limitation is very inconvenient, and is the /raison d'être/ for virtual environments, which we disuss next.
+** Virtual environments
+   :PROPERTIES:
+   :EXPORT_HUGO_WEIGHT: auto
+   :EXPORT_HUGO_SECTION: intermezzo_virtual_environments
+   :EXPORT_FILE_NAME: virtual_environments
+   :END:
+
+Roughly speaking, the python executable ~/some_dir/lib/pythonX.Y/bin/python~
+and the package installation location ~/some_dir/lib/pythonX.Y/site-packages/~
+consitute what is commonly referred to as the /python environment/.
+
+If you cannot install different versions of a package in a single environment,
+let's have multiple environments! This is the core idea of /python virtual environments/.
+Whenever a python virtual environment ~my_env~ is /activated/, the ~python~ command points to a
+python executable that is unique to this environment (~my-env/lib/pythonX.Y/bin/python~), with a unique package installation location
+specific to this environment (~my_env/lib/pythonX.Y/site-packages~).
+
+*** Activity 4 - Virtual environments
+
+1. Move to the ~analysis1/~ directory and create a virtual environment there:
+  #+begin_src shell :exports code
+    cd python-packaging-workshop/analysis1/
+    python -m venv venv-analysis1
+  #+end_src
+  This commands creates a new directory ~venv-analysis1~ in the current directory.
+  Feel free to explore its contents.
+
+2. Activate the virtual envoronment for analysis1
+  #+begin_src shell :exports code
+    source venv-analysis1/bin/activate # GNU/Linux and MacOS
+    venv-analysis1\Scripts\activate.bat # Windows command prompt
+    venv-analysis1\Scripts\Activate.ps1 # Windows PowerShell
+  #+end_src
+
+3. What is the location of the current python executable?
+   Hint: The built-in python package ~sys~ provides a variable ~executable~.
+
+4. Use ~pip list~ to list the currently installed packages.
+   Note that your package and its dependencies have disappeared, and only
+   the core python packages are installed. We effectively have a "fresh" python environment.
+
+5. Update ~pip~ and install utility packages
+   #+begin_src shell
+     pip install --upgrade pip setuptools wheel
+   #+end_src
+
+6. Move to the the ~tstools-dist~ distribution package directory and install it into the
+   current environment:
+  #+begin_src shell :exports code
+    pip install .
+  #+end_src
+
+7. Where was the package installed?
+   Hint: When importing package ~package~ in python, use ~package.__file__~
+   to check the location of the corresponding ~__init__.py~ file.
+
+
+The above exercise demonstrates that, after activating the ~venv-analysis1~, the command ~python~
+executes the python executable ~analysis1/venv-analysis1/bin/python~, and python packages are installed
+in the ~analysis1/venv-analysis1/lib/pythonX.Y/site-packages~ directory.
+This means that we are now working in a python environment that is /isolated/ from other python environments
+in your machine:
+- other virtual environments
+- system python environment (see below)
+- other versions of python installed in your system
+- Anaconda environments
+
+You can therefore install all the packages necessery to your projects, without worry of breaking
+other projects.
+
+** Make virtual environments a habit
+   :PROPERTIES:
+   :EXPORT_HUGO_WEIGHT: auto
+   :EXPORT_HUGO_SECTION: intermezzo_virtual_environments
+   :EXPORT_FILE_NAME: make_virtual_environments_a_habit
+   :END:
+
+You just learned what are python virtual environment and how to use them? Don't look back, and make them a habit.
+The limitation that only one version of a package can be installed at one time in one python environment can be the source
+of very frustrating problems, distracting you from your research.
+Moreover, using one python environment for all your projects means that this environment will change as you work on different projects,
+making it very hard to resolve dependency problems when they (and they will) occur.
+
+Most of the time, a better approach is to have one (or more if needed) virtual environments per analyses and projects.
+Coming back to our earlier example with the ~tstools~ package used in analysis analysis1 and analysis2, a recommended setup
+would be
+#+begin_example
+  tstools/
+	  setup.py
+	  tstools
+	  venv-tstools
+  (venv-tstools) $ pip install -e tstools/
+
+  analysis1/
+	  analysis1.py
+	  data/
+	  venv-analysis1/
+  (venv-analysis1) $ pip install tstools/
+
+  analysis2/
+	  analysis2.py
+	  data/
+	  venv-analysis2/
+  (venv-analysis2) $ pip install tstools/
+#+end_example
+
+When working on the package itself, we work within the virtual environment ~venv-tstools~, in
+which the package is installed in editable mode. In this way, we avoid constant re-installation
+of the package each time we make a change to it.
+
+When working on either analyses, we activate the corresponding virtual environment, in which
+our package ~tstools~ is installed in normal, non-editable mode, possibly along all the
+other packages that we need for this particular analysis.
+
+#+begin_quote
+Most GNU/Linux distributions as well as MacOS come with a version of python already installed.
+This version is often referred to as the /system python/ or the /base python/. *Leave it alone*.
+As the name suggest, this version of python is used likely to be used by some parts of your system,
+and updating or breaking it would mean breaking these partsof your system that rely on it.
+#+end_quote
+
+
+*** TODO Installing utilities in global python 3.8                 :noexport:
+*** TODO managing several versions of pytho nwith pyenv            :noexport:
+
+** Summary
+   :PROPERTIES:
+   :EXPORT_HUGO_WEIGHT: auto
+   :EXPORT_HUGO_SECTION: intermezzo_virtual_environments
+   :EXPORT_FILE_NAME: summary
+   :END:
+
+- One big limitations of Python is that only one version of a package can be installed in a given environment.
+- Virtual environments allow us to create multiple python environments, isolated from each other. Therefore we don't worry
+  about breaking other projects that may rely on other versions of some packages.
+- Having one virtual environment per analysis is a good research practice since it faciliates reproducibility of your results.
+- Never use the system python installation, unless your have a very good reason to.
+
+* Part 3 - Sharing the package
+** Building python distributions
+   :PROPERTIES:
+   :EXPORT_HUGO_SECTION: part3_sharing_a_package
+   :EXPORT_FILE_NAME: building_distributions
+   :EXPORT_HUGO_WEIGHT: auto
+   :END:
+    Before you can distribute a package, you must first create a /distribution/.
+    A distribution is a single file that bundles all the files and data necessary to install and use
+    the package - but also sometimes compile and test it.
+    
+    A distribution usually takes the from of an archive (~.tar~, ~.zip~ or similar).
+    There are several possible distribution formats, but in 2020, only two are really important: the /source distribution/ (sdist) and the /wheel/ (bdist_wheel).
+
+*** Source distributions
+     
+     Python distributions are commonly built using the ~setuptools~ library, /via/ the ~setup.py~ file.
+     Building a source distribution looks like this:
+#+begin_src shell :dir "tstools-dist" :results output :exports both
+python setup.py sdist
+#+end_src
+
+#+RESULTS:
+#+begin_example
+running sdist
+running egg_info
+writing tstools.egg-info/PKG-INFO
+writing dependency_links to tstools.egg-info/dependency_links.txt
+writing requirements to tstools.egg-info/requires.txt
+writing top-level names to tstools.egg-info/top_level.txt
+reading manifest file 'tstools.egg-info/SOURCES.txt'
+writing manifest file 'tstools.egg-info/SOURCES.txt'
+running check
+creating tstools-0.1
+creating tstools-0.1/tstools
+creating tstools-0.1/tstools.egg-info
+copying files to tstools-0.1...
+copying setup.py -> tstools-0.1
+copying tstools/__init__.py -> tstools-0.1/tstools
+copying tstools/show_extremes.py -> tstools-0.1/tstools
+copying tstools/tstools.py -> tstools-0.1/tstools
+copying tstools.egg-info/PKG-INFO -> tstools-0.1/tstools.egg-info
+copying tstools.egg-info/SOURCES.txt -> tstools-0.1/tstools.egg-info
+copying tstools.egg-info/dependency_links.txt -> tstools-0.1/tstools.egg-info
+copying tstools.egg-info/requires.txt -> tstools-0.1/tstools.egg-info
+copying tstools.egg-info/top_level.txt -> tstools-0.1/tstools.egg-info
+Writing tstools-0.1/setup.cfg
+creating dist
+Creating tar archive
+removing 'tstools-0.1' (and everything under it)
+#+end_example
+
+This mainly does three things:
+- It gathers the python source files that consitute the package (incuding the ~setup.py~).
+- It writes some metadata about the package in a directory ~<package name>.egg-info~.
+- It bundles everyting into a tar archive.
+
+The newly created sdist is written in a directory ~dist~ next to the ~setup.py~ file:
+#+begin_src shell :dir "tstools-dist" :results output :exports both
+tar --list -f dist/tstools-0.1.tar.gz
+#+end_src
+
+#+RESULTS:
+#+begin_example
+tstools-0.1/
+tstools-0.1/PKG-INFO
+tstools-0.1/setup.cfg
+tstools-0.1/setup.py
+tstools-0.1/tstools/
+tstools-0.1/tstools/__init__.py
+tstools-0.1/tstools/show_extremes.py
+tstools-0.1/tstools/tstools.py
+tstools-0.1/tstools.egg-info/
+tstools-0.1/tstools.egg-info/PKG-INFO
+tstools-0.1/tstools.egg-info/SOURCES.txt
+tstools-0.1/tstools.egg-info/dependency_links.txt
+tstools-0.1/tstools.egg-info/requires.txt
+tstools-0.1/tstools.egg-info/top_level.txt
+#+end_example
+
+#+begin_quote
+Take a moment to explore the content of the archive.
+#+end_quote
+
+As the name suggest a source distribution is nothing more than the source code of your package, 
+along with the ~setup.py~ necessary to install it.
+Anyone with the source distribution therefore has everything they need to install your package.
+Actually it's even possible to give the sdist directly to ~pip~:
+
+#+begin_src shell
+pip install tstools-0.1.tar.gz
+#+end_src
+
+And you're done!
+
+*** Wheel distributions
+
+    Source distributions are very basic, and installing them basically amount
+    to running the package's ~setup.py~ script.
+    These poses two issues:
+    - In addition to the call to ~setup~, the ~setup.py~ can contain any valid Python.
+      Thinking about security for moment, this means that installing a package could
+      result in the execution of malicious code.
+    - To install from a source distribution, ~pip~ must first unpack the distribution, then
+      execute the ~setup.py~ script. Directly unpacking to the correct location in the python
+      path would be much faster.
+    - Package can contain code written in a compiled language like C or Fortran. Source 
+      distributions assume that the recipient has all the tools necesseray to compile
+      this code. Compiling code can also takes time (hours!).
+
+    This issues can be overcome by using /wheel distributions/. 
+    For pure-Python packages, a wheel is very similar to a source distribution: it's an
+    archive that contains both the python source of the package and some metadata.
+    The main difference with sdists is that *wheels doesn't require pip to execute 
+    the ~setup.py~* file, instead the content of wheels is directly unpacked in the correct
+    location - most likely your current environment's ~site-packages/~ directory.
+    This makes the installation of wheels both safer and faster.
+
+#+begin_quote
+Another very important feature of python wheels is that they can embed compiled code, 
+effectively alleviating the need for the recipient to compile (/build/) anything. 
+As a result, the wheel is platform-dependant, but makes the installation considerably easier
+and faster. For this reason, wheels are part of the family of /built distrubtions/.
+Another type of built distribution is the python /egg/. However, the wheel format was
+created in response to the shortcomings of Python eggs and this format is now obsolete.
+See [[https://packaging.python.org/discussions/wheel-vs-egg/][Wheel vs Egg]] on the Python Packaging User Guide.
+#+end_quote
+
+**** Activity 5 - Building a Python wheel
+     1. If you don't have one, create a new developement virtual environment in the 
+	~tstools-dist~ directory:
+	#+begin_src shell
+	  python -m venv tstools-venv
+	  source tstools-venv/bin/activate # (GNU/Linux and MacOS)
+	  tstools-venv\Scripts\activate.bat # (Windows command prompt)
+	  tstools-venv\Scripts\Activate.ps1 # (Windows PowerShell)
+	#+end_src
+     2. Update ~pip~
+	#+begin_src shell
+	  pip install --upgrade pip
+	#+end_src
+     3. Install ~setuptools~ and the ~wheel~ extension:
+	#+begin_src shell
+	  pip install setuptools wheel
+	#+end_src
+     4. Build a wheel
+	#+begin_src shell
+	  python setup.py bdist_wheel
+	#+end_src
+     5. Install the wheel using ~pip~.
+	Hint: wheels are written in the ~dist/~ directory, next to the ~setup.py~ file, just 
+        like source distributions.
+     6. ~.whl~ files are basically zip files. Unzip the wheel and explore its contents.
+    
+#+begin_quote
+The ~bdist_wheel~ command is only available after the package [[https://pypi.org/project/wheel/][wheel]] is installed in your current environment.
+It is an extension to the ~setuptools~ package.
+#+end_quote
+** Uploading distributions to PyPI
+   :PROPERTIES:
+   :EXPORT_HUGO_WEIGHT: auto
+   :EXPORT_FILE_NAME: uploading_to_pypi
+   :EXPORT_HUGO_SECTION: part3_sharing_a_package
+   :END:
+
+In the previous section you learned how to create distributions for your packages.
+In this section, we look at how to share them with others, so that other people can easily install and use your packages.
+
+*** Package repositories
+Let's think about distributing packages for a minute. 
+If you wanted to share one of your distributions (whether it's a source distribution or a wheel distribution) with a colleague, how would
+you proceed?
+If you both work next to each other, you could simply exchange a USB stick. If not, you can probably email the distribution, or share it /via/ a cloud host.
+
+Although effective on a short term basis, these solutions present serious shortcomings:
+- You would have to share the distribution again each time you make a change to the package.
+- If your colleague wants a specific version (that's not the latest), you would have to check out the old version of your package and build the distribution again - unless your manually
+  keep track of all your distributions.
+- Users of your package must contact you to get the distribution, and wait for you to get back to them.
+
+These issues can be overcome by using /package repositories/. A package repository is just an index of packages hosted on distant servers, available to download from installation.
+If you're using GNU/Linux, you use a package repository each time you install new software: ~apt install libreoffice~ is nothing but a request for the package ~libreoffice~ to one of
+the Ubuntu package repositories.
+
+The main reposotiry for Python is the [[https://pypi.org/][Python Package Index]] (PyPI).
+Whenever you install a package with ~pip install package~, ~pip~ first check than ~package~ isnt a directory on your machine (in which case ~pip~ tries to install it as a package).
+If not, ~pip~ makes a request to PyPI and, if it exists, downloads and install package ~package~.
+
+*** Publishing distributions to the test PyPI index
+
+Once a package is uploaded to PyPI, it cannot easily be removed. 
+This is to prevent packages from disappearing without warning while other software depends on it.
+To test publishing our distributions, we can use [[https://test.pypi.org][test.pypi.org]] instead of the regular [[https://pypi.org/][pypi.org]].
+This is a separate database dedicated to tests and experiments.
+
+Uploading distributions to PyPI and (TestPyPI) is a very simple process, thanks to [[https://twine.readthedocs.io/en/latest/][twine]], a utility for publishing Python packages on PyPI.
+Installing twine is as simple as 
+#+begin_src shell
+pip install twine
+#+end_src
+
+You can now upload a distribution to to the regular PyPI (not the test one) as follows:
+#+begin_src shell
+twine upload dist/tstools-0.1-py3-none-any.whl
+#+end_src
+
+You will be asked for your usernanme and password for PyPI. To create an account, visit [[https://pypi.org/account/register/]].
+If you find yourself uploading packages often, or if you are concerned about security, it is possible to authenticate to PyPI using
+a token that's specific for your account, or a particular project. This token is usually configured in a =~/.pypirc= file, and allows you to authenticate
+without entering your username and password every time. Note that you might want to encrypt =~/.pypirc= if concerned about security.
+
+**** Activity 6 - Publishing distributions to TestPyPI
+
+     1. On PyPI (or TestPyPI), there cannot be two package with the same name. Therefore, before you upload your ~tstools~ package, 
+	you must give the project a unique name. To do so, open the ~tstools-dist/setup.py~ file and change the ~name~ entry
+	in the call to the ~setup~ function to something unique to you, for instance:
+	#+begin_src python
+	  name='tstools-<yourname>'
+	#+end_src
+     2. Install ~twine~ in your ~python-packaging-venv~ environment
+	#+begin_src shell
+	  pip install twine
+	#+end_src
+     3. If you created some distributions in the previous sections, remove everything inside your ~dist/~ directory
+	#+begin_src shell
+	  rm dist/*
+	#+end_src
+     4. Create a source distribution and a wheel for your ~tstools~ package
+	#+begin_src shell
+	  python setup.py sdist bdist_wheel
+	#+end_src
+     5. If you don't have one, create an account on the Test PyPI index by visiting https://test.pypi.org/account/register/.
+     6. Lastly, publish your distributions to the test PyPI index:
+	#+begin_src shell
+	  twine upload --repository testpypi dist/*
+	#+end_src
+	Can you find your package on [[https://test.pypi.org][test.pypi.org]] ?
+     7. Create a new virtual environment and install your ~tstools~ package from the test PyPI index
+	#+begin_src shell
+	pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple your-package
+	#+end_src
+	The above command is a bit lengthy, but it's just because we are installing from the test
+	index instead of the regular one. ~--index-url https://test.pypi.org/simple/~ tells ~pip~
+	to look for the package at ~test.pypi.org~ instead of ~pypi.org~ (which is the default).
+	In addition, ~--extra-index-url https://pypi.org/simple~ tells ~pip~ to looks for dependencies
+	in the regular index, instead of the test one. In our case dependencies are ~numpy~ and ~matplotlib~.
+	
+     Congratulations! You just published your first Python package.
+
+     Remarks:
+     - It's always a good idea to first publish your package on the test index, before
+       you publish it to the real index.
+     - ~twine~ and ~pip~ defaut to the real index https://pypi.org, so commands are really simple:
+       #+begin_src shell
+       twine upload <distributions> # Publish package
+       pip install <package name> # Install package from pypi.org
+       #+end_src
+     - You can, and /should/ publish your package each time you make a new version of it.
+       All versions are stored on PyPI, and are accessible from pip.
+       See the [[https://pypi.org/project/numpy/#history][release history for numpy]] for example.
+       You could just install a specific version of numpy with:
+       #+begin_src shell
+	 pip install numpy==1.17.5
+       #+end_src
+     - Note that /you cannot/ erase a published version of your package.
+       If you discover a bug in a version of your package that already has been published and want to fix it without changing the version number,
+       what is known as a /post-release/, /i.e/ adding ~.postX~ add the end of the faulty version number.
+       For instance:
+       #+begin_src python
+	 setup(name='tstools',
+	       version='0.1.post1',
+	       ...)
+       #+end_src
+       and upload your fixed package. 
+       This will still be considered version ~0.1~, but ~pip install tstools==0.1~ will download
+       the ~0.1.post1~ version.
+       Note that you could publish subsequent post-releases, /i.e/ ~.post2~, ~.post3~...
+       
+	
+* Part 4 - Going further
+*** Source vs built distributions
+*** Inlude data in the distribution
+*** include tests in the distribution
+*** Custom setuptools commands
+*** Packaging C/C++/Fortran extensions
+*** tox
+* Footnotes
+[fn:1] Since Python 3.3, this isn't technically true. Directories without a ~__init__.py~ file
+are called namespace packages, see [[https://packaging.python.org/guides/packaging-namespace-packages/][Packaging namespace packages]] on the Python Packaging User Guide).
+However, their discussion is beyond the scope of this course.
