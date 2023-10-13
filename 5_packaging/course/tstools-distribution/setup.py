@@ -23,4 +23,12 @@ setup(name='tstools',
 # could also use flit, hatchling, PDM... these are just other setup packages. 
 # We will focus on setuptools
 
-# install package using python -m pip install setup.py (with venv active)
+# install package using python setup.py install (with venv active)
+# or 
+# python -m pip install .
+# or 
+# pip install . 
+# or 
+# pip install -e . # this means install directs to a local package that can be edited  rather than installing a fixed version of the package
+# it writes a file <package-name>.egg-link at the installation location rather than copying the actual package there 
+# installation location as in site-packages in the venv, found in sys.path
