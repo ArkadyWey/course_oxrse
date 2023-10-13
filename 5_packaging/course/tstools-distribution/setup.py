@@ -1,10 +1,11 @@
 from setuptools import setup
 
-setup(name='./tstools',
+setup(name='tstools',
       version='0.1',
       description='A package to analyse timeseries',
       url='myfancywebsite.com',
-      author='Spam Eggs',
+      author='Arkady Wey',
+      author_email="arkady.wey@maths.ox.ac.uk",
       packages=['tstools'],
       install_requires = ["numpy", "matplotlib", "scipy"],
       license='GPLv3')
@@ -21,3 +22,5 @@ setup(name='./tstools',
 
 # could also use flit, hatchling, PDM... these are just other setup packages. 
 # We will focus on setuptools
+
+# install package using python -m pip install setup.py (with venv active)

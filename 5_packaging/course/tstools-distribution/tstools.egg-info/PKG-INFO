@@ -1,0 +1,11 @@
+Metadata-Version: 2.1
+Name: tstools
+Version: 0.1
+Summary: A package to analyse timeseries
+Home-page: myfancywebsite.com
+Author: Arkady Wey
+Author-email: arkady.wey@maths.ox.ac.uk
+License: GPLv3
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Requires-Dist: scipy
