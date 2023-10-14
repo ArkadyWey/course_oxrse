@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import sys
-#print(sys.path) # to find package or module, it must be in path 
+print(sys.path) # to find package or module, it must be in path 
 # at the moment, analysis1 isn't in path and so we can't use tstools package or any of its modules
 # could add it manually...
 sys.path.append("/home/user/projects/courses/oxrse/oxrse/5_packaging/course/analysis1")
