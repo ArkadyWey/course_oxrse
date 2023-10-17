@@ -25,7 +25,7 @@ setup(name='tstools',
 
 # install package using python setup.py install (with venv active)
 # or 
-# python -m pip install .
+# python -m pip install . # . is directory where setup.py is found i.e. the dist directory
 # or 
 # pip install . 
 # or 
