@@ -22,3 +22,6 @@ your software, i.e what-does-what.
 gives you access to a myriad of fantastic tools used by thousands of 
 python developers everyday. Examples include pytest for automated testing, 
 sphinx for building you documentation, tox for automation of project-level tasks.
+
+Distributing
+- We want to publish the code to  make it possible for other people to install it.
