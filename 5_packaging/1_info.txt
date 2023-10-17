@@ -24,4 +24,13 @@ python developers everyday. Examples include pytest for automated testing,
 sphinx for building you documentation, tox for automation of project-level tasks.
 
 Distributing
+## Source distributions
 - We want to publish the code to  make it possible for other people to install it.
+- Install biuld: python -m install build 
+- Build a source distribution: python -m build --sdist 
+- The above makes a dist directory and <package-name>.egg-tools directory in distribution directory
+- Look inside dist : tar --list --file dist/tstools-0.1.tar.gz (this zipped directory is called the source dist)
+- This source dist contains everything necessary to install the package
+- Give the source dist to pip : python -m pip install dist/tstools-0.1.tar.gz
+
+## Wheel distributions
