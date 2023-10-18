@@ -32,5 +32,70 @@ Distributing
 - Look inside dist : tar --list --file dist/tstools-0.1.tar.gz (this zipped directory is called the source dist)
 - This source dist contains everything necessary to install the package
 - Give the source dist to pip : python -m pip install dist/tstools-0.1.tar.gz
+- Notice to install the package we had to build sdist first. 
+- This causes issues if package contains compiled code.
 
 ## Wheel distributions
+- Wheel distributions are a way of getting around building before we install. 
+- The contents of wheels are unpackacked into the environments lib/sit-packages instead of making a sdist in the distribution/dist/ direcotry
+- Install wheel and build : python -m pip install build wheel
+- Build the wheel : python -m build --wheel  
+- This will add tstools-0.1-py3-non-any.whl to /dist/
+- Give the wheel dist to pip : python -m pip install dist/tstools-0.1-py3-non-any.whl
+
+Publishing packages
+- For this, we need to use a package repository - online index of packages e.g. pypi - python package index
+- When we run pip install <package>, pip checks whether <package> is a local package and if not searches for it in pypi
+- apt is the equivalent command for linux packages
+- We are now going to publish our package  
+- Install twine: python -m pip install twine
+- Upload to pypi: python -m twine upload ./dist/tstools-0.1-py3-none-any.whl
+- This can't be removed. 
+- Instead, we will upload to test.pypi.org
+- Change name of package in setup.py -- names have to be unique on pypi
+- Create source distribution and wheel distribution : python -m build # builds sdist then wheel if you parse no flags
+- Upload : python -m twine upload --repository testpypi dist/*
+- To use above command, make testpypi acc, add 2-factor auth, generate token
+- TO use above command, add /.pypirc (pypi run commands - i.e., command pipy should run when executed)
+- See https://packaging.python.org/en/latest/specifications/pypirc/) for format
+
+Format of ~/pypirc
+---------------------------------
+[distutils]
+index-servers =
+    first-repository
+    second-repository
+
+[first-repository]
+repository = <first-repository URL>
+username = <first-repository username>
+password = <first-repository password>
+
+[second-repository]
+repository = <second-repository URL>
+username = <second-repository username>
+password = <second-repository password>
+
+NB: Requires generating recovery codes in pypi -
+I have stored these in ~/pypirc
+
+[distutils]
+  index-servers =
+      testpypi
+      pypi
+  
+[testpypi]
+  repository = https://test.pypi.org/legacy/
+  username = __token__ # token name - token_testpypi_1
+  password = *******
+
+[pypi]
+  repository = https://upload.pypi.org/legacy/
+  username = __token__ # token name - token_pypi_1
+  password = *******
+
+- Install package : pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple tstools-arkadywey==0.2
+- Before the above, make a venv so you can see it installs necessary dependencies
+- NB twine and pip default to https://pypi.org,
+- upload : twine upload <distributions> # Publish package
+- download : pip install <package name>==max.min.micro # Install package from pypi.org

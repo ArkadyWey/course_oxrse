@@ -1,9 +1,9 @@
 from setuptools import setup
 
-setup(name='tstools',
-      version='0.1',
+setup(name='tstools-arkadywey',
+      version='0.2',
       description='A package to analyse timeseries',
-      url='myfancywebsite.com',
+      url=' http://www.myfancywebsite.com',
       author='Arkady Wey',
       author_email="arkady.wey@maths.ox.ac.uk",
       packages=['tstools'],
